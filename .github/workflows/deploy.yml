@@ -20,7 +20,7 @@ jobs:
           node-version: "20" # Replace with your desired Node.js version
 
       - name: Install dependencies
-        run: npm install # Installs all required Node.js dependencies
+        run: npm install --force # Installs all required Node.js dependencies
 
       - name: Build the project (Optional)
         run: npm run build # Use this if you have a build step
