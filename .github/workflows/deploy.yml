@@ -1,0 +1,40 @@
+# .github/workflows/deploy.yml
+name: Deploy to Render
+
+on:
+  push:
+    branches:
+      - main # This will trigger the workflow when there is a push to the main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3 # Checks out the code from the repository
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20" # Replace with your desired Node.js version
+
+      - name: Install dependencies
+        run: npm install # Installs all required Node.js dependencies
+
+      - name: Build the project (Optional)
+        run: npm run build # Use this if you have a build step
+
+      - name: Deploy to Render
+        env:
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          # Install Render CLI
+          npm install -g render-cli
+
+          # Deploy the service using the Render CLI
+          render deployments create \
+            --service-id $RENDER_SERVICE_ID \
+            --api-key $RENDER_API_KEY \
+            --branch main

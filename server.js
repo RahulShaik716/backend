@@ -3,10 +3,14 @@ const http = require("http");
 const cors = require("cors");
 const { Server } = require("socket.io");
 const mongoose = require("mongoose");
+
 require("dotenv").config();
 //username = rahulshaik185
 //password = 0DofhRXvjTndCgkN
+
 const authRoutes = require("./Routes/auth");
+const messagesch = require("./models/Messages");
+const User = require("./models/user");
 const app = express();
 app.use(
   cors({
@@ -25,28 +29,48 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
   },
 });
+
 let onlineUsers = {};
 io.on("connection", (socket) => {
-  console.log("New client connected");
-
-  socket.on("join", ({ username }) => {
-    onlineUsers[socket.id] = username;
+  socket.on("join", async ({ username }) => {
     console.log(`${username} has joined`);
-    io.emit("online_users", Object.values(onlineUsers));
+    if (username) {
+      const user = await User.findOne({ username });
+      onlineUsers[socket.id] = {
+        id: user._id,
+        name: user.username,
+        photo: user.photo,
+      };
+      io.emit("online_users", Object.values(onlineUsers));
+      const messages = await messagesch.find({
+        $or: [{ sender: username }, { receiver: username }],
+      });
+      io.to(socket.id).emit("message_history", messages);
+    }
   });
 
-  socket.on("send_message", ({ sender, receiver, message }) => {
-    console.log(sender, message, receiver);
-    const targetSocketId = Object.keys(onlineUsers).find(
-      (id) => onlineUsers[id] === receiver
-    );
-    if (targetSocketId) {
-      io.to(targetSocketId).emit("receive_message", { sender, message });
+  socket.on(
+    "send_message",
+    async ({ sender, receiver, message, timestamp }) => {
+      console.log(sender, message, receiver);
+      const targetSocketId = Object.keys(onlineUsers).find(
+        (id) => onlineUsers[id].name === receiver
+      );
+
+      let messagecon = new messagesch({ sender, receiver, message, timestamp });
+      await messagecon.save();
+
+      if (targetSocketId) {
+        io.to(targetSocketId).emit("receive_message", {
+          sender,
+          message,
+          timestamp,
+        });
+      }
     }
-    console.log(message);
-  });
+  );
   socket.on("disconnect", () => {
-    console.log(`${onlineUsers[socket.id]} has left`);
+    console.log(`${onlineUsers[socket.id]?.name} has left`);
     delete onlineUsers[socket.id];
     io.emit("online_users", Object.values(onlineUsers));
   });
