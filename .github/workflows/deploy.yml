@@ -34,4 +34,4 @@ jobs:
           render deployments create \
             --service-id $RENDER_SERVICE_ID \
             --api-key $RENDER_API_KEY \
-            --branch main
+            --branch main --engine ejs
